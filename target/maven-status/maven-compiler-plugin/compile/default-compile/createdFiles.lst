@@ -1,0 +1,4 @@
+com\gunes\cravings\CravingsApplication.class
+com\gunes\cravings\controller\CravingController.class
+com\gunes\cravings\repository\CravingRepository.class
+com\gunes\cravings\model\Craving.class

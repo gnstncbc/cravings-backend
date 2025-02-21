@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CravingsApplication",
+            "request": "launch",
+            "mainClass": "com.gunes.cravings.CravingsApplication",
+            "projectName": "cravings"
+        }
+    ]
+}
