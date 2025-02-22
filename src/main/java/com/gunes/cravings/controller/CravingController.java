@@ -33,5 +33,8 @@ public class CravingController {
         cravingRepository.deleteById(id);
     }
 
-    
+    @DeleteMapping("/deleteAll")
+    public void deleteAllCravings() {
+        cravingRepository.deleteAll();
+    }
 }

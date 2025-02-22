@@ -19,7 +19,6 @@ public class Craving {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private int duration;  // Saniye cinsinden
-
     private int intensity; // 1-10 arasında
     private String mood;
     private String notes;
@@ -30,5 +29,4 @@ public class Craving {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Getter ve Setter metodları
 }
