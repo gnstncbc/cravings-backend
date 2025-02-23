@@ -28,4 +28,5 @@ public class Craving {
     public Craving() {
         this.createdAt = LocalDateTime.now();
     }
+    
 }
