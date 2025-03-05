@@ -37,4 +37,9 @@ public class CravingController {
     public void deleteAllCravings() {
         cravingRepository.deleteAll();
     }
+
+    @GetMapping("/intensity/{intensity}")
+    public List<Craving> getCravingsByIntensity(@PathVariable int intensity) {
+        return cravingRepository.findByIntensity(intensity);
+    }
 }
