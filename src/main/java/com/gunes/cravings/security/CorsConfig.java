@@ -14,8 +14,8 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("https://gnstncbc.com")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // OPTIONS eklemeyi unutma
+                        .allowedOriginPatterns("*") // '*' kullanımı için allowedOriginPatterns kullan!
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
             }
