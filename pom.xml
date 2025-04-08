@@ -69,8 +69,6 @@
     		<artifactId>jjwt</artifactId>
     		<version>0.9.1</version>
 		</dependency> -->
-
-
 		<!-- Spring Boot Validation -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/cravings")
 public class CravingController {
@@ -15,6 +14,7 @@ public class CravingController {
     @Autowired
     private CravingRepository cravingRepository;
 
+    
     // Tüm kayıtları getir
     @GetMapping
     public List<Craving> getAllCravings() {
