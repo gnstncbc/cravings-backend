@@ -17,7 +17,7 @@ public class CravingController {
 
     
     // Tüm kayıtları getir
-    @GetMapping
+    @GetMapping("/all")
     public List<Craving> getAllCravings() {
         return cravingRepository.findAll();
     }
