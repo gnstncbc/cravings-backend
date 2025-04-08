@@ -15,6 +15,7 @@ public class CravingController {
     @Autowired
     private CravingRepository cravingRepository;
 
+    
     // Tüm kayıtları getir
     @GetMapping
     public List<Craving> getAllCravings() {
