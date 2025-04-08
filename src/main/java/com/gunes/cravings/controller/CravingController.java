@@ -4,10 +4,10 @@ import com.gunes.cravings.model.Craving;
 import com.gunes.cravings.repository.CravingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import java.time.LocalDateTime;
 
 import java.util.List;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/cravings")
 public class CravingController {
@@ -42,10 +42,5 @@ public class CravingController {
     @GetMapping("/intensity/{intensity}")
     public List<Craving> getCravingsByIntensity(@PathVariable int intensity) {
         return cravingRepository.findByIntensity(intensity);
-    }
-
-    @GetMapping("/time/{startTime}/{endTime}/{startTime2}/{endTime2}")
-    public List<Craving> getCravingsByTime(@PathVariable String startTime, @PathVariable String endTime, @PathVariable String startTime2, @PathVariable String endTime2) {
-        return cravingRepository.findByStartTimeBetweenAndEndTimeBetween(LocalDateTime.parse(startTime), LocalDateTime.parse(endTime), LocalDateTime.parse(startTime2), LocalDateTime.parse(endTime2));
     }
 }
