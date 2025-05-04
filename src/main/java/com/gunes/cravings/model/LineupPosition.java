@@ -33,8 +33,8 @@ public class LineupPosition {
     private String teamIdentifier; // "A" veya "B"
 
     @Column(nullable = false)
-    private Double coordinateX;
+    private Double xPercent;
 
     @Column(nullable = false)
-    private Double coordinateY;
+    private Double yPercent;
 }

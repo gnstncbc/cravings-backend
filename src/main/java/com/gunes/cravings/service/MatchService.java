@@ -80,7 +80,7 @@ public class MatchService {
                 }
 
                 LineupPositionInputDTO positionInput = entry.getValue();
-                if (positionInput == null || positionInput.getX() == null || positionInput.getY() == null) {
+                if (positionInput == null || positionInput.getXPercent() == null || positionInput.getYPercent() == null) {
                      System.err.println("Invalid position data for player ID: " + playerId);
                      continue; // veya hata fırlat
                 }
@@ -94,8 +94,8 @@ public class MatchService {
                 position.setPlayer(player);
                 // position.setMatch(match); // addLineupPosition içinde set ediliyor
                 position.setTeamIdentifier(teamIdentifier);
-                position.setCoordinateX(positionInput.getX());
-                position.setCoordinateY(positionInput.getY());
+                position.setXPercent(positionInput.getXPercent());
+                position.setYPercent(positionInput.getYPercent());
 
                 // Match entity'sine ekle (ilişkiyi kurmak için helper methodu kullan)
                 match.addLineupPosition(position);
@@ -131,8 +131,8 @@ public class MatchService {
                  LineupPositionDTO posDTO = new LineupPositionDTO(
                         player.getId(),
                         player.getName(), // Oyuncu ismini de ekleyelim
-                        pos.getCoordinateX(),
-                        pos.getCoordinateY()
+                        pos.getXPercent(),
+                        pos.getYPercent()
                 );
 
                 if ("A".equalsIgnoreCase(pos.getTeamIdentifier())) {
