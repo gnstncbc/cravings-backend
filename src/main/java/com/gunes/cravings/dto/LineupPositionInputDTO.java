@@ -7,13 +7,18 @@ import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
-@Data
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@Data // Getter ve Setter'ları otomatik oluşturur
+@AllArgsConstructor // Tüm alanları içeren bir constructor oluşturur
 @NoArgsConstructor
-@AllArgsConstructor
 public class LineupPositionInputDTO { // Maç kaydederken gelen pozisyon bilgisi
     @NotNull // X ve Y boş olamaz
-    private Double x;
+    @JsonProperty("xPercent")
+    private Double xPercent;
+
     @NotNull
-    private Double y;
+    @JsonProperty("yPercent")
+    private Double yPercent;
      // Frontend zaten ismi biliyor, sadece koordinat yeterli
 }

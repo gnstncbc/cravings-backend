@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 public class LineupPositionDTO { // Bir oyuncunun pozisyon detayı
     private Long playerId; // Frontend'in ID'yi bilmesi gerekebilir
     private String playerName; // İsmi göstermek için
-    private Double x;
-    private Double y;
+    private Double xPercent;
+    private Double yPercent;
 }
