@@ -18,4 +18,7 @@ public class MatchDetailDTO { // Maçın tüm detayları (yükleme için)
     private String location;
     private Map<String, LineupPositionDTO> lineupA = new HashMap<>(); // Key: Player ID (String), Value: Position
     private Map<String, LineupPositionDTO> lineupB = new HashMap<>(); // Key: Player ID (String), Value: Position
+
+    private Integer teamAScore;
+    private Integer teamBScore;
 }
