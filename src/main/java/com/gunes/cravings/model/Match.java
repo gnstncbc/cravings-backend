@@ -38,6 +38,16 @@ public class Match {
     @EqualsAndHashCode.Exclude
     private MatchScore matchScore;
 
+    // Vote counts
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int teamAVotes = 0;
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int teamBVotes = 0;
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int drawVotes = 0;
+
     // Helper method: LineupPosition eklemek için (Mevcut)
     public void addLineupPosition(LineupPosition position) {
         this.lineupPositions.add(position);

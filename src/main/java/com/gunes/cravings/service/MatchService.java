@@ -6,6 +6,7 @@ import com.gunes.cravings.model.Match;
 import com.gunes.cravings.model.Player;
 import com.gunes.cravings.exception.ResourceNotFoundException;
 import com.gunes.cravings.model.MatchScore; // YENİ IMPORT
+import com.gunes.cravings.model.VoteType; // Added import
 import com.gunes.cravings.repository.MatchRepository;
 import com.gunes.cravings.repository.PlayerRepository;
 // MatchScoreRepository import'u eğer Match üzerinden yönetiliyorsa gerekmeyebilir.
@@ -135,7 +136,7 @@ public class MatchService {
         );
     }
 
-    private MatchDetailDTO convertToMatchDetailDTO(Match match) {
+    public MatchDetailDTO convertToMatchDetailDTO(Match match) {
         MatchDetailDTO detailDTO = new MatchDetailDTO(); // lineupA ve B map'leri initialize edilmiş olmalı
         detailDTO.setId(match.getId());
         detailDTO.setSavedAt(match.getSavedAt());
@@ -150,6 +151,11 @@ public class MatchService {
             detailDTO.setTeamAScore(null); // Veya frontend'in beklediği bir varsayılan (örn. 0)
             detailDTO.setTeamBScore(null);
         }
+
+        // Add vote counts
+        detailDTO.setTeamAVotes(match.getTeamAVotes());
+        detailDTO.setTeamBVotes(match.getTeamBVotes());
+        detailDTO.setDrawVotes(match.getDrawVotes());
 
         Set<LineupPosition> positions = match.getLineupPositions();
         if (positions != null) {

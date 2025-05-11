@@ -3,8 +3,9 @@ package com.gunes.cravings.controller;
 import com.gunes.cravings.dto.MatchCreateRequestDTO;
 import com.gunes.cravings.dto.MatchDetailDTO;
 import com.gunes.cravings.dto.MatchSummaryDTO;
-import com.gunes.cravings.dto.MatchScoreRequestDTO; // YENİ IMPORT
-import com.gunes.cravings.dto.MatchScoreResponseDTO; // YENİ IMPORT
+import com.gunes.cravings.dto.MatchScoreRequestDTO;
+import com.gunes.cravings.dto.MatchScoreResponseDTO;
+import com.gunes.cravings.dto.VoteRequestDTO;
 import com.gunes.cravings.service.MatchService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
