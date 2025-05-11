@@ -21,4 +21,9 @@ public class MatchDetailDTO { // Maçın tüm detayları (yükleme için)
 
     private Integer teamAScore;
     private Integer teamBScore;
+
+    // Vote counts
+    private int teamAVotes;
+    private int teamBVotes;
+    private int drawVotes;
 }

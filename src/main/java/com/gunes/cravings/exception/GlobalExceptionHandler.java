@@ -7,6 +7,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.security.core.AuthenticationException;
+import com.gunes.cravings.exception.AlreadyVotedException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -63,6 +65,41 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<Object> handleEmailAlreadyExistsException(EmailAlreadyExistsException ex, WebRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", System.currentTimeMillis());
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", "Conflict");
+        body.put("message", ex.getMessage());
+        body.put("path", request.getDescription(false).substring(4)); // Remove "uri=" prefix
+
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Object> handleAuthenticationException(AuthenticationException ex, WebRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", System.currentTimeMillis());
+        body.put("status", HttpStatus.UNAUTHORIZED.value());
+        body.put("error", "Unauthorized");
+        body.put("message", "Authentication failed: " + ex.getMessage()); // Or a more generic message like "Invalid credentials"
+        body.put("path", request.getDescription(false).substring(4)); // Remove "uri=" prefix
+
+        return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AlreadyVotedException.class)
+    public ResponseEntity<Object> handleAlreadyVotedException(AlreadyVotedException ex, WebRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", System.currentTimeMillis());
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", "Conflict");
+        body.put("message", ex.getMessage());
+        body.put("path", request.getDescription(false).substring(4)); // Remove "uri=" prefix
+
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
 
     // Diğer tüm beklenmedik hatalar için (Genel 500 hatası)
     @ExceptionHandler(Exception.class)
