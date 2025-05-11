@@ -17,8 +17,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" > .env
-          docker build --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} -t gnstncbc/my-backend-app:latest .
+          docker build -t gnstncbc/my-backend-app:latest .
           docker push gnstncbc/my-backend-app:latest
 
       - name: Deploy to DigitalOcean

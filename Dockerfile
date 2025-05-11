@@ -2,11 +2,6 @@
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# ARG olarak build esnasında değer alacak
-ARG JWT_SECRET
-
-# ENV olarak runtime ortamına aktarılacak
-ENV JWT_SECRET=${JWT_SECRET}
 # pom.xml ve kaynak dosyalarını kopyalayın
 COPY pom.xml .
 COPY src ./src
