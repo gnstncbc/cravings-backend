@@ -15,4 +15,8 @@ public class PlayerDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean isActive;
+    private Integer winCount;
+    private Integer loseCount;
+    private Integer drawCount;
+    private Double winLoseRatio;
 }

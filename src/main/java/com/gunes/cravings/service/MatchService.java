@@ -1,16 +1,13 @@
 package com.gunes.cravings.service;
 
 import com.gunes.cravings.dto.*;
-import com.gunes.cravings.model.LineupPosition;
-import com.gunes.cravings.model.Match;
-import com.gunes.cravings.model.Player;
+import com.gunes.cravings.model.*; // PlayerStats, LineupPosition için
 import com.gunes.cravings.exception.ResourceNotFoundException;
-import com.gunes.cravings.model.MatchScore; // YENİ IMPORT
-import com.gunes.cravings.model.VoteType; // Added import
 import com.gunes.cravings.repository.MatchRepository;
 import com.gunes.cravings.repository.PlayerRepository;
-// MatchScoreRepository import'u eğer Match üzerinden yönetiliyorsa gerekmeyebilir.
-// import com.gunes.cravings.repository.MatchScoreRepository;
+import com.gunes.cravings.repository.PlayerStatsRepository; // YENİ IMPORT
+// LineupPositionRepository'ye doğrudan ihtiyaç olmayabilir eğer Match üzerinden erişiliyorsa
+// import com.gunes.cravings.repository.LineupPositionRepository; 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +23,8 @@ public class MatchService {
 
     private final MatchRepository matchRepository;
     private final PlayerRepository playerRepository; // Player bulmak için
-    // private final MatchScoreRepository matchScoreRepository; // Eğer direkt kullanılacaksa
+    private final PlayerStatsRepository playerStatsRepository; // YENİ: PlayerStatsRepository enjekte edildi
+    // private final LineupPositionRepository lineupPositionRepository; // Eğer Match entity'sinden lineup'a ulaşılamıyorsa
 
     @Transactional(readOnly = true)
     public List<MatchSummaryDTO> getAllMatchSummaries() {
@@ -38,7 +36,7 @@ public class MatchService {
 
     @Transactional(readOnly = true)
     public MatchDetailDTO getMatchDetails(Long id) {
-        Match match = matchRepository.findByIdWithLineupPositions(id) // Bu özel sorgunuzu koruyoruz
+        Match match = matchRepository.findByIdWithLineupPositions(id) // Bu özel sorgunuz lineup ve player'ları fetch ediyor
                 .orElseThrow(() -> new ResourceNotFoundException("Match not found with id: " + id));
         return convertToMatchDetailDTO(match);
     }
@@ -56,34 +54,43 @@ public class MatchService {
         // match.setMatchScore(null); // Zaten yeni Match nesnesinde null olacaktır.
 
         Match savedMatch = matchRepository.save(match);
+        // getMatchDetails, lineup'ları ve player'ları da içeren DTO'yu döndürür.
         return getMatchDetails(savedMatch.getId());
     }
 
-    // YENİ: Skor Kaydetme/Güncelleme Servis Metodu
     @Transactional
     public MatchScoreResponseDTO saveOrUpdateMatchScore(Long matchId, MatchScoreRequestDTO scoreRequestDTO) {
-        Match match = matchRepository.findById(matchId) // Skor güncellerken pozisyonları çekmeye gerek yok
+        Match match = matchRepository.findByIdWithLineupPositions(matchId) // lineupPositions'ı da çekiyoruz.
                 .orElseThrow(() -> new ResourceNotFoundException("Match not found with id: " + matchId + " to update score."));
 
         MatchScore matchScore = match.getMatchScore();
+        boolean isNewScore = false;
         if (matchScore == null) {
             matchScore = new MatchScore();
-            // MatchScore entity'sindeki @MapsId ve Match entity'sindeki setMatchScore helper'ı
-            // ID ve çift yönlü ilişkiyi doğru kurmalı.
-            // matchScore.setId(match.getId()); // setMatchScore içinde yapılabilir veya @MapsId bunu yönetir
-            // matchScore.setMatch(match);   // setMatchScore içinde yapılabilir
-            match.setMatchScore(matchScore); // Bu helper metod ID ve match referansını ayarlamalı
+            isNewScore = true;
+            // matchScore.setId(match.getId()); // @MapsId ve Match entity'sindeki helper bunu yönetmeli
         }
+        
+        // TODO: Eğer skor değişiyorsa, eski istatistikleri geri almak/düzeltmek için bir mantık eklenebilir.
+        // Bu örnekte, her skor kaydında mevcut duruma göre istatistikler güncellenir.
+        // Eğer bir maçın sonucu (örn: A kazanmıştı, sonra B kazandı olarak değişti)
+        // tamamen değişiyorsa, bu basit artırma/azaltma mantığı yeterli olmayabilir.
+        // Şimdilik, sadece kazanan/kaybeden sayısını artırıyoruz.
 
         matchScore.setTeamAScore(scoreRequestDTO.getTeamAScore());
         matchScore.setTeamBScore(scoreRequestDTO.getTeamBScore());
 
-        // Match entity'si kaydedildiğinde, CascadeType.ALL sayesinde ilişkili MatchScore da kaydedilir/güncellenir.
-        matchRepository.save(match);
+        if (isNewScore) {
+            match.setMatchScore(matchScore); // Bu helper metod ID ve match referansını ayarlamalı
+        }
+        
+        // Önce PlayerStats'ı güncelle, sonra maçı (ve skoru cascade ile) kaydet.
+        updatePlayerStatsForMatchResult(match, scoreRequestDTO.getTeamAScore(), scoreRequestDTO.getTeamBScore());
 
-        return new MatchScoreResponseDTO(matchId, matchScore.getTeamAScore(), matchScore.getTeamBScore(), "Skorlar başarıyla güncellendi.");
+        matchRepository.save(match); // Match'i kaydetmek, CascadeType.ALL ile MatchScore'u da kaydeder/günceller.
+
+        return new MatchScoreResponseDTO(matchId, matchScore.getTeamAScore(), matchScore.getTeamBScore(), "Skorlar başarıyla güncellendi ve oyuncu istatistikleri işlendi.");
     }
-
 
     @Transactional
     public void deleteMatch(Long id) {
@@ -101,13 +108,13 @@ public class MatchService {
                 try {
                     playerId = Long.parseLong(entry.getKey());
                 } catch (NumberFormatException e) {
-                    System.err.println("Invalid player ID format in request: " + entry.getKey());
-                    continue;
+                    System.err.println("Invalid player ID format in request: " + entry.getKey() + " for match: " + match.getMatchName());
+                    continue; 
                 }
 
                 LineupPositionInputDTO positionInput = entry.getValue();
                 if (positionInput == null || positionInput.getXPercent() == null || positionInput.getYPercent() == null) {
-                    System.err.println("Invalid position data for player ID: " + playerId);
+                    System.err.println("Invalid position data for player ID: " + playerId + " for match: " + match.getMatchName());
                     continue;
                 }
 
@@ -119,15 +126,91 @@ public class MatchService {
                 position.setTeamIdentifier(teamIdentifier);
                 position.setXPercent(positionInput.getXPercent());
                 position.setYPercent(positionInput.getYPercent());
+                // position.setMatch(match); // Bu, match.addLineupPosition içinde yapılmalı.
 
-                match.addLineupPosition(position);
+                match.addLineupPosition(position); // Match entity'sindeki helper bu pozisyonu ekler ve position.setMatch(this) yapar.
             }
+        }
+    }
+    
+    // YENİ: Maç sonucuna göre oyuncu istatistiklerini güncelleyen metod
+    @Transactional // Bu metodun da transactional olması iyi bir pratiktir.
+    protected void updatePlayerStatsForMatchResult(Match match, int teamAScore, int teamBScore) {
+        Set<LineupPosition> positions = match.getLineupPositions();
+        if (positions == null || positions.isEmpty()) {
+            System.err.println("No lineup positions found for match ID: " + match.getId() + ". Skipping player stats update.");
+            return;
+        }
+
+        List<Player> teamAPlayers = positions.stream()
+                .filter(lp -> "A".equalsIgnoreCase(lp.getTeamIdentifier()) && lp.getPlayer() != null)
+                .map(LineupPosition::getPlayer)
+                .collect(Collectors.toList());
+
+        List<Player> teamBPlayers = positions.stream()
+                .filter(lp -> "B".equalsIgnoreCase(lp.getTeamIdentifier()) && lp.getPlayer() != null)
+                .map(LineupPosition::getPlayer)
+                .collect(Collectors.toList());
+
+        if (teamAScore > teamBScore) { // A Takımı kazandı
+            incrementWinCounts(teamAPlayers);
+            incrementLoseCounts(teamBPlayers);
+        } else if (teamBScore > teamAScore) { // B Takımı kazandı
+            incrementWinCounts(teamBPlayers);
+            incrementLoseCounts(teamAPlayers);
+        } else { // Beraberlik
+            incrementDrawCounts(teamAPlayers);
+            incrementDrawCounts(teamBPlayers);
+        }
+    }
+
+    private void incrementWinCounts(List<Player> players) {
+        for (Player player : players) {
+            PlayerStats stats = playerStatsRepository.findById(player.getId())
+                    .orElseGet(() -> {
+                        // Bu durumun olmaması beklenir, çünkü her oyuncu oluşturulduğunda PlayerStats'ı da oluşmalı.
+                        // Eğer bir şekilde oluşmamışsa, hata loglanır ve yeni bir stats oluşturulur.
+                        System.err.println("CRITICAL: PlayerStats not found for player ID: " + player.getId() + " during win update. Creating a new one.");
+                        PlayerStats newStats = new PlayerStats();
+                        newStats.setPlayer(player); // PlayerStats'daki setPlayer metodu playerId'yi de set etmeli.
+                        // newStats.setWinCount(0); // Zaten default 0 olacak.
+                        // newStats.setLoseCount(0);
+                        return newStats; // Bu yeni stats daha sonra kaydedilecek.
+                    });
+            stats.setWinCount(stats.getWinCount() + 1);
+            playerStatsRepository.save(stats);
+        }
+    }
+
+    private void incrementLoseCounts(List<Player> players) {
+        for (Player player : players) {
+            PlayerStats stats = playerStatsRepository.findById(player.getId())
+                    .orElseGet(() -> {
+                        System.err.println("CRITICAL: PlayerStats not found for player ID: " + player.getId() + " during lose update. Creating a new one.");
+                        PlayerStats newStats = new PlayerStats();
+                        newStats.setPlayer(player);
+                        return newStats;
+                    });
+            stats.setLoseCount(stats.getLoseCount() + 1);
+            playerStatsRepository.save(stats);
+        }
+    }
+
+    private void incrementDrawCounts(List<Player> players) {
+        for (Player player : players) {
+            PlayerStats stats = playerStatsRepository.findById(player.getId())
+                    .orElseGet(() -> {
+                        System.err.println("CRITICAL: PlayerStats not found for player ID: " + player.getId() + " during draw update. Creating a new one.");
+                        PlayerStats newStats = new PlayerStats();
+                        newStats.setPlayer(player);
+                        return newStats;
+                    });
+            stats.setDrawCount(stats.getDrawCount() + 1);
+            playerStatsRepository.save(stats);
         }
     }
 
     private MatchSummaryDTO convertToMatchSummaryDTO(Match match) {
-        // SKORLARI ÖZET DTO'YA EKLEMEK İSTERSENİZ BURADA YAPABİLİRSİNİZ
-        // Şimdilik orijinal haliyle bırakıyorum.
         return new MatchSummaryDTO(
                 match.getId(),
                 match.getSavedAt(),
@@ -136,35 +219,31 @@ public class MatchService {
         );
     }
 
-    public MatchDetailDTO convertToMatchDetailDTO(Match match) {
-        MatchDetailDTO detailDTO = new MatchDetailDTO(); // lineupA ve B map'leri initialize edilmiş olmalı
+    public MatchDetailDTO convertToMatchDetailDTO(Match match) { // Public yaptık çünkü PollService'de de kullanılıyor olabilir.
+        MatchDetailDTO detailDTO = new MatchDetailDTO();
         detailDTO.setId(match.getId());
         detailDTO.setSavedAt(match.getSavedAt());
         detailDTO.setMatchName(match.getMatchName());
         detailDTO.setLocation(match.getLocation());
 
-        // YENİ: Skor bilgilerini DTO'ya ekle
         if (match.getMatchScore() != null) {
             detailDTO.setTeamAScore(match.getMatchScore().getTeamAScore());
             detailDTO.setTeamBScore(match.getMatchScore().getTeamBScore());
         } else {
-            detailDTO.setTeamAScore(null); // Veya frontend'in beklediği bir varsayılan (örn. 0)
+            detailDTO.setTeamAScore(null);
             detailDTO.setTeamBScore(null);
         }
 
-        // Add vote counts
         detailDTO.setTeamAVotes(match.getTeamAVotes());
         detailDTO.setTeamBVotes(match.getTeamBVotes());
         detailDTO.setDrawVotes(match.getDrawVotes());
 
-        Set<LineupPosition> positions = match.getLineupPositions();
+        Set<LineupPosition> positions = match.getLineupPositions(); // Zaten fetch edilmiş olmalı
         if (positions != null) {
             for (LineupPosition pos : positions) {
                 Player player = pos.getPlayer();
                 if (player == null) continue;
 
-                // Mevcut LineupPositionDTO kullanımınız korunuyor.
-                // Bu DTO'nun (playerId, playerName, xPercent, yPercent) constructor'ı olduğu varsayılıyor.
                 LineupPositionDTO posDTO = new LineupPositionDTO(
                         player.getId(),
                         player.getName(),
