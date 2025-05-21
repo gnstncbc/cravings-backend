@@ -15,4 +15,8 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     // Bir maçı pozisyonlarıyla birlikte çekmek için (FetchType.LAZY kullanılıyorsa gerekli olabilir)
     @Query("SELECT m FROM Match m LEFT JOIN FETCH m.lineupPositions lp LEFT JOIN FETCH lp.player WHERE m.id = :id")
     Optional<Match> findByIdWithLineupPositions(Long id);
+
+    // YENİ METOT: Skoru olan ve lineup pozisyonları olan maçları getirir
+    @Query("SELECT DISTINCT m FROM Match m JOIN FETCH m.matchScore ms JOIN FETCH m.lineupPositions lp JOIN FETCH lp.player WHERE ms.teamAScore IS NOT NULL AND ms.teamBScore IS NOT NULL")
+    List<Match> findAllWithScoresAndLineups();
 }
