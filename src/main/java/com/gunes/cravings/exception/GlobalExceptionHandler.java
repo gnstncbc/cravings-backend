@@ -8,15 +8,17 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.security.core.AuthenticationException;
-import com.gunes.cravings.exception.AlreadyVotedException;
+// import com.gunes.cravings.exception.AlreadyVotedException; // Already present
+// import com.gunes.cravings.exception.InvalidReferralCodeException; // Add this import
 
 import java.util.HashMap;
 import java.util.Map;
 
-@ControllerAdvice // Tüm @Controller'lar için merkezi Exception yönetimi
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ResourceNotFoundException yakalandığında
+    // ... (other existing handlers) ...
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Object> handleResourceNotFoundException(
             ResourceNotFoundException ex, WebRequest request) {
@@ -25,12 +27,11 @@ public class GlobalExceptionHandler {
         body.put("status", HttpStatus.NOT_FOUND.value());
         body.put("error", "Not Found");
         body.put("message", ex.getMessage());
-        body.put("path", request.getDescription(false).substring(4)); // URI=/api/...
+        body.put("path", request.getDescription(false).substring(4)); 
 
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
-     // ResourceAlreadyExistsException yakalandığında
     @ExceptionHandler(ResourceAlreadyExistsException.class)
     public ResponseEntity<Object> handleResourceAlreadyExistsException(
             ResourceAlreadyExistsException ex, WebRequest request) {
@@ -44,7 +45,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
 
-    // Validation hataları yakalandığında (@Valid kullanıldığında)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Object> handleValidationExceptions(
             MethodArgumentNotValidException ex, WebRequest request) {
@@ -59,7 +59,7 @@ public class GlobalExceptionHandler {
         body.put("timestamp", System.currentTimeMillis());
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Validation Error");
-        body.put("messages", errors); // Hangi alanda ne hata var
+        body.put("messages", errors); 
         body.put("path", request.getDescription(false).substring(4));
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
@@ -72,7 +72,7 @@ public class GlobalExceptionHandler {
         body.put("status", HttpStatus.CONFLICT.value());
         body.put("error", "Conflict");
         body.put("message", ex.getMessage());
-        body.put("path", request.getDescription(false).substring(4)); // Remove "uri=" prefix
+        body.put("path", request.getDescription(false).substring(4)); 
 
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
@@ -83,8 +83,8 @@ public class GlobalExceptionHandler {
         body.put("timestamp", System.currentTimeMillis());
         body.put("status", HttpStatus.UNAUTHORIZED.value());
         body.put("error", "Unauthorized");
-        body.put("message", "Authentication failed: " + ex.getMessage()); // Or a more generic message like "Invalid credentials"
-        body.put("path", request.getDescription(false).substring(4)); // Remove "uri=" prefix
+        body.put("message", "Authentication failed: " + ex.getMessage()); 
+        body.put("path", request.getDescription(false).substring(4));
 
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
     }
@@ -96,24 +96,35 @@ public class GlobalExceptionHandler {
         body.put("status", HttpStatus.CONFLICT.value());
         body.put("error", "Conflict");
         body.put("message", ex.getMessage());
-        body.put("path", request.getDescription(false).substring(4)); // Remove "uri=" prefix
+        body.put("path", request.getDescription(false).substring(4)); 
 
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
 
-    // Diğer tüm beklenmedik hatalar için (Genel 500 hatası)
+    // New Handler for InvalidReferralCodeException
+    @ExceptionHandler(InvalidReferralCodeException.class)
+    public ResponseEntity<Object> handleInvalidReferralCodeException(
+            InvalidReferralCodeException ex, WebRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", System.currentTimeMillis());
+        body.put("status", HttpStatus.BAD_REQUEST.value()); // 400 Bad Request
+        body.put("error", "Bad Request");
+        body.put("message", ex.getMessage());
+        body.put("path", request.getDescription(false).substring(4));
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGlobalException(
             Exception ex, WebRequest request) {
-         Map<String, Object> body = new HashMap<>();
+        Map<String, Object> body = new HashMap<>();
         body.put("timestamp", System.currentTimeMillis());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         body.put("error", "Internal Server Error");
-        // Gerçek production'da ex.getMessage() yerine daha genel bir mesaj gösterilebilir.
         body.put("message", "An unexpected error occurred: " + ex.getMessage());
         body.put("path", request.getDescription(false).substring(4));
 
-        // Konsola hatanın detayını yazdır (loglama için önemli)
         ex.printStackTrace();
 
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);

@@ -33,7 +33,7 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS yapılandırmasını ekle
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(req -> req
                         .requestMatchers("/api/auth/**").permitAll()
@@ -41,21 +41,26 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/api/matches/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/matches/**").permitAll()
+                        
+                        // Admin specific endpoints
+                        .requestMatchers("/api/admin/**").hasAuthority(Role.ADMIN.name()) // General admin path
+
+                        // Match specific rules (redundant if /api/admin/** is stricter, but kept for clarity)
                         .requestMatchers(HttpMethod.POST, "/api/matches/**").hasAuthority(Role.ADMIN.name())
-                        .requestMatchers(HttpMethod.PUT, "/api/matches/**").hasAuthority(Role.ADMIN.name()) 
+                        .requestMatchers(HttpMethod.PUT, "/api/matches/**").hasAuthority(Role.ADMIN.name())
                         .requestMatchers(HttpMethod.DELETE, "/api/matches/**").hasAuthority(Role.ADMIN.name())
+                        .requestMatchers(HttpMethod.POST, "/api/matches/{matchId}/score").hasAuthority(Role.ADMIN.name())
+
+                        // Player specific rules (redundant if /api/admin/** is stricter)
                         .requestMatchers(HttpMethod.DELETE, "/api/players/**").hasAuthority(Role.ADMIN.name())
                         .requestMatchers(HttpMethod.POST, "/api/players/**").hasAuthority(Role.ADMIN.name())
                         .requestMatchers(HttpMethod.PUT, "/api/players/**").hasAuthority(Role.ADMIN.name())
-                        .requestMatchers(HttpMethod.GET, "/api/players/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/matches/**").hasAnyAuthority(Role.USER.name(), Role.ADMIN.name())
-                        .requestMatchers(HttpMethod.POST, "/api/matches").hasAuthority(Role.ADMIN.name()) 
-                        .requestMatchers(HttpMethod.POST, "/api/matches/{matchId}/score").hasAuthority(Role.ADMIN.name()) // Score endpoint
-                        .requestMatchers(HttpMethod.PUT, "/api/matches/**").hasAuthority(Role.ADMIN.name())
-                        .requestMatchers(HttpMethod.DELETE, "/api/matches/**").hasAuthority(Role.ADMIN.name())
+                        
+                        // Poll related rules
                         .requestMatchers(HttpMethod.POST, "/api/polls/{matchId}/vote").hasAnyAuthority(Role.USER.name(), Role.ADMIN.name())
                         .requestMatchers(HttpMethod.GET, "/api/polls/{matchId}/results").hasAnyAuthority(Role.USER.name(), Role.ADMIN.name())
                         .requestMatchers(HttpMethod.GET, "/api/polls/{matchId}/user-votes").hasAuthority(Role.ADMIN.name())
+                        
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
@@ -67,20 +72,16 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // application.properties dosyanızdaki origin'ler
         configuration
                 .setAllowedOrigins(List.of("http://localhost:3000", "https://gnstncbc.com", "http://localhost:8080"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        // Tarayıcının göndermesine izin verilen header'lar (Authorization dahil)
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type",
                 "X-Requested-With", "Accept", "Origin"));
-        configuration.setAllowCredentials(true); // Cookie veya Authorization header'ları gibi kimlik bilgileri için
-                                                 // önemli
-        configuration.setMaxAge(3600L); // Bir preflight isteğinin sonuçlarının ne kadar süreyle önbelleğe alınabileceği
-                                        // (saniye cinsinden)
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // Bu yapılandırmayı tüm yollara uygula
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
