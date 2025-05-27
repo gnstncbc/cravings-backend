@@ -30,4 +30,7 @@ public class RegisterRequestDTO {
     private String password;
 
     private Role role = Role.USER;
-} 
+
+    @NotEmpty(message = "Referral code cannot be empty") // Add validation
+    private String referralCode; // New field
+}
