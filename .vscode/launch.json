@@ -5,7 +5,8 @@
             "name": "CravingsApplication",
             "request": "launch",
             "mainClass": "com.gunes.cravings.CravingsApplication",
-            "projectName": "cravings"
+            "projectName": "cravings",
+            "envFile": "C:/JavaProjects/cravings-backend/.env",
         }
     ]
 }
