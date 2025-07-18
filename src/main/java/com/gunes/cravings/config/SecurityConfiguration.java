@@ -37,6 +37,10 @@ public class SecurityConfiguration {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(req -> req
+                        // .requestMatchers("/ws/**").hasAnyAuthority(Role.USER.name(), Role.ADMIN.name()) // WebSocket endpoint'ini permitAll yap
+                        // .requestMatchers("/app/**").hasAnyAuthority(Role.USER.name(), Role.ADMIN.name()) // Eğer STOMP mesajlaşma için özel bir istek geliyorsa
+                        .requestMatchers("/app/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/para/**").hasAuthority("ROLE_API")
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/players/**").permitAll()
