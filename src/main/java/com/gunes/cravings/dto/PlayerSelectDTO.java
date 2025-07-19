@@ -6,12 +6,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PlayerSelectDTO {
-    private Long playerId;
-    private String playerName;
-    private String selectedTeam; // "A" or "B"
-    private String selectorEmail; // Who selected this player
+    private String playerId;
+    private String teamIdentifier; // "A" or "B"
 }
