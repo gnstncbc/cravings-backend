@@ -1,13 +1,13 @@
 package com.gunes.cravings.config;
 
-import com.gunes.cravings.model.User; // Eğer User modeliniz varsa
+import com.gunes.cravings.config.JwtService; 
 import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.SignatureException;
 import io.jsonwebtoken.UnsupportedJwtException;
-import io.jsonwebtoken.security.SignatureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -15,13 +15,18 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
+// Authentication import'u buraya da gerekebilir, eğer kullanılıyorsa
+import org.springframework.security.core.Authentication; 
+import org.springframework.security.core.context.SecurityContextHolder; // Bu import kalacak
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
 
+@Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketAuthInterceptor.class);
@@ -29,8 +34,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
-    // JwtService ve UserDetailsService'i constructor injection ile alıyoruz
-    public WebSocketAuthInterceptor(JwtService jwtService, UserDetailsService userDetailsService) {
+    public WebSocketAuthInterceptor(JwtService jwtService, @Lazy UserDetailsService userDetailsService) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
     }
@@ -39,8 +43,6 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        // Sadece CONNECT komutunda JWT doğrulamasını yapıyoruz
-        // Çünkü token bu aşamada client tarafından gönderilir.
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             List<String> authorizationHeaders = accessor.getNativeHeader("Authorization");
             String jwt = null;
@@ -55,41 +57,58 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             if (jwt != null) {
                 try {
                     String userEmail = jwtService.extractUsername(jwt);
-
-                    if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    if (userEmail != null) {
                         UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-
                         if (jwtService.isTokenValid(jwt, userDetails)) {
                             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                                     userDetails,
-                                    null, // Kimlik bilgisi zaten JWT ile doğrulanmıştır, şifreye gerek yok
+                                    null,
                                     userDetails.getAuthorities()
                             );
-                            // WebSocket bağlantısı için Spring Security bağlamına kimlik doğrulamayı ekle
-                            accessor.setUser(authentication); 
-                            // NOT: SecurityContextHolder.getContext().setAuthentication(authentication);
-                            // buraya eklenmez, çünkü ChannelInterceptor'da her gelen WebSocket mesajı için yeni bir güvenlik bağlamı oluşturulur.
-                            // accesor.setUser() WebSocket oturumu için yeterlidir.
+                            accessor.setUser(authentication);
+                            // DEĞİŞİKLİK: SecurityContextHolder.getContext().setAuthentication(authentication); satırı buradan kaldırıldı.
+                            logger.info("WebSocket CONNECT: User {} authenticated successfully and Principal set on accessor.", userEmail);
                         } else {
                             logger.warn("WebSocket CONNECT: JWT token is invalid for user: {}", userEmail);
-                            // Token geçersizse bağlantıyı reddedebiliriz, veya sadece authenticate etmeyiz.
-                            // Örneğin throw new MessagingException("Invalid JWT Token");
+                            // SecurityContextHolder.clearContext(); // Buradan kaldırıldı
                         }
+                    } else {
+                        logger.warn("WebSocket CONNECT: User email could not be extracted from JWT.");
+                        // SecurityContextHolder.clearContext(); // Buradan kaldırıldı
                     }
                 } catch (ExpiredJwtException ex) {
                     logger.warn("WebSocket CONNECT: Expired JWT token for {}: {}", accessor.getFirstNativeHeader("login"), ex.getMessage());
-                    // Frontend'e hata mesajı göndermek için farklı bir strateji gerekebilir (örn. StompErrorFrame).
+                    // SecurityContextHolder.clearContext(); // Buradan kaldırıldı
                 } catch (UnsupportedJwtException | MalformedJwtException | SignatureException | IllegalArgumentException ex) {
                     logger.warn("WebSocket CONNECT: Invalid JWT token format or signature: {}", ex.getMessage());
-                } catch (JwtException ex) {
-                    logger.error("WebSocket CONNECT: General JWT error: {}", ex.getMessage(), ex);
+                    // SecurityContextHolder.clearContext(); // Buradan kaldırıldı
+                } catch (UsernameNotFoundException ex) {
+                    logger.warn("WebSocket CONNECT: User not found for email extracted from JWT: {}", ex.getMessage());
+                    // SecurityContextHolder.clearContext(); // Buradan kaldırıldı
                 } catch (Exception e) {
                     logger.error("WebSocket CONNECT: An unexpected error occurred during JWT processing: {}", e.getMessage(), e);
+                    // SecurityContextHolder.clearContext(); // Buradan kaldırıldı
                 }
             } else {
                 logger.debug("WebSocket CONNECT: No JWT token found in Authorization header.");
+                // SecurityContextHolder.clearContext(); // Buradan kaldırıldı
             }
         }
-        return message; // Mesajı işlemeye devam et
+        // DEĞİŞİKLİK: CONNECT dışındaki komutlar için SecurityContextHolder ayarlama mantığı kaldırıldı,
+        // çünkü bu işi SecurityContextChannelInterceptor yapacak.
+        // if (accessor.getUser() instanceof Authentication) {
+        //     SecurityContextHolder.getContext().setAuthentication((Authentication) accessor.getUser());
+        // } else {
+        //     SecurityContextHolder.clearContext();
+        // }
+
+        return message;
+    }
+
+    @Override
+    public void afterSendCompletion(Message<?> message, MessageChannel channel, boolean sent, Exception ex) {
+        // DEĞİŞİKLİK: SecurityContextHolder.clearContext(); satırı buradan kaldırıldı.
+        // Bu temizleme işini SecurityContextChannelInterceptor üstlenecek.
+        // logger.debug("SecurityContextHolder cleared after message processing.");
     }
 }
