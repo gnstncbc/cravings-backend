@@ -3,6 +3,7 @@ package com.gunes.cravings.controller;
 
 import com.gunes.cravings.dto.PlayerCreateDTO;
 import com.gunes.cravings.dto.PlayerDTO;
+import com.gunes.cravings.dto.PlayerHistoryDTO;
 import com.gunes.cravings.service.PlayerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ import java.util.List;
 public class PlayerController {
 
     private final PlayerService playerService;
-
+    
     @GetMapping
     public ResponseEntity<List<PlayerDTO>> getAllPlayers() {
         List<PlayerDTO> players = playerService.getAllPlayers();
@@ -44,5 +45,11 @@ public class PlayerController {
     public ResponseEntity<Void> deletePlayer(@PathVariable Long id) {
         playerService.deletePlayer(id);
         return ResponseEntity.noContent().build(); // 204 No Content
+    }
+
+    @GetMapping("/{playerId}/history")
+    public ResponseEntity<PlayerHistoryDTO> getPlayerHistory(@PathVariable Long playerId) {
+        PlayerHistoryDTO history = playerService.getPlayerHistory(playerId);
+        return ResponseEntity.ok(history);
     }
 }
