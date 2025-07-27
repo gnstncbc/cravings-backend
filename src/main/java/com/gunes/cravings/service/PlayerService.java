@@ -2,13 +2,17 @@ package com.gunes.cravings.service;
 
 import com.gunes.cravings.model.LineupPosition;
 import com.gunes.cravings.model.Match;
+import com.gunes.cravings.dto.LineupPositionDTO;
+import com.gunes.cravings.dto.MatchHistoryItemDTO;
 import com.gunes.cravings.dto.PlayerCreateDTO;
 import com.gunes.cravings.dto.PlayerDTO;
+import com.gunes.cravings.dto.PlayerHistoryDTO;
 import com.gunes.cravings.model.MatchScore;
 import com.gunes.cravings.model.Player;
 import com.gunes.cravings.model.PlayerStats; // YENİ IMPORT
 import com.gunes.cravings.exception.ResourceAlreadyExistsException;
 import com.gunes.cravings.exception.ResourceNotFoundException;
+import com.gunes.cravings.repository.LineupPositionRepository;
 import com.gunes.cravings.repository.MatchRepository;
 import com.gunes.cravings.repository.PlayerRepository;
 import com.gunes.cravings.repository.PlayerStatsRepository; // YENİ IMPORT
@@ -16,7 +20,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -28,6 +35,8 @@ public class PlayerService {
     private final PlayerRepository playerRepository;
     private final PlayerStatsRepository playerStatsRepository; // YENİ: PlayerStatsRepository enjekte edildi
     private final MatchRepository matchRepository;
+    private final LineupPositionRepository lineupPositionRepository;
+    private final MatchService matchService; // YENİ: MatchService enjekte edildi
 
     // Tüm aktif oyuncuları getir (veya tümü, ihtiyaca göre)
     @Transactional(readOnly = true) // Veri okuma işlemi
@@ -271,5 +280,96 @@ public class PlayerService {
                 playerStatsRepository.save(stats);
             });
         }
+    }
+@Transactional(readOnly = true)
+    public PlayerHistoryDTO getPlayerHistory(Long playerId) {
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Player not found with id: " + playerId));
+
+        // Tüm maçları tarih sırasına göre çek
+        List<Match> allMatches = matchRepository.findAllByOrderBySavedAtDesc();
+
+        // Oyuncunun oynadığı maçların ID'lerini bir sete topla (hızlı erişim için)
+        Set<Long> playedMatchIds = lineupPositionRepository.findByPlayerWithMatchDetails(playerId)
+                .stream()
+                .map(lp -> lp.getMatch().getId())
+                .collect(Collectors.toSet());
+
+        List<MatchHistoryItemDTO> matchHistory = new ArrayList<>();
+        List<String> resultChars = new ArrayList<>();
+
+        // Tüm maçlar üzerinden dön
+        for (Match match : allMatches) {
+            // Eğer oyuncu bu maçta oynamışsa
+            if (playedMatchIds.contains(match.getId())) {
+                // Oyuncunun bu maçtaki pozisyon bilgisini bul
+                LineupPosition appearance = match.getLineupPositions().stream()
+                        .filter(lp -> lp.getPlayer().getId().equals(playerId))
+                        .findFirst()
+                        .orElse(null);
+
+                if (appearance == null) continue; // Beklenmedik bir durum, normalde olmamalı
+
+                MatchScore score = match.getMatchScore();
+                String playerTeam = appearance.getTeamIdentifier();
+                String result;
+                String resultChar;
+
+                if (score != null && score.getTeamAScore() != null && score.getTeamBScore() != null) {
+                    int teamAScore = score.getTeamAScore();
+                    int teamBScore = score.getTeamBScore();
+
+                    if (teamAScore == teamBScore) {
+                        result = "DRAW";
+                        resultChar = "B";
+                    } else if (("A".equals(playerTeam) && teamAScore > teamBScore) || ("B".equals(playerTeam) && teamBScore > teamAScore)) {
+                        result = "WIN";
+                        resultChar = "G";
+                    } else {
+                        result = "LOSS";
+                        resultChar = "M";
+                    }
+                } else {
+                    result = "SCORE_PENDING";
+                    resultChar = "?";
+                }
+                resultChars.add(resultChar);
+
+                // Bu oynanmış maçı geçmiş listesine ekle
+                matchHistory.add(MatchHistoryItemDTO.builder()
+                        .matchId(match.getId())
+                        .matchName(match.getMatchName())
+                        .matchDate(match.getSavedAt())
+                        .teamAScore(score != null ? score.getTeamAScore() : null)
+                        .teamBScore(score != null ? score.getTeamBScore() : null)
+                        .playerTeam(playerTeam)
+                        .result(result)
+                        .lineupA(matchService.convertToMatchDetailDTO(match).getLineupA())
+                        .lineupB(matchService.convertToMatchDetailDTO(match).getLineupB())
+                        .build());
+            } else {
+                // Oyuncu bu maçta oynamamışsa, sonuç serisine '-' ekle
+                resultChars.add("-");
+            }
+        }
+
+        PlayerStats stats = player.getPlayerStats();
+        int winCount = stats != null ? stats.getWinCount() : 0;
+        int drawCount = stats != null ? stats.getDrawCount() : 0;
+        int loseCount = stats != null ? stats.getLoseCount() : 0;
+        int totalGames = winCount + drawCount + loseCount;
+        double winPercentage = (totalGames > 0) ? ((double) winCount / totalGames) * 100 : 0;
+
+        return PlayerHistoryDTO.builder()
+                .playerId(player.getId())
+                .playerName(player.getName())
+                .winCount(winCount)
+                .drawCount(drawCount)
+                .loseCount(loseCount)
+                .totalGames(totalGames)
+                .winPercentage(winPercentage)
+                .resultSequence(String.join(" - ", resultChars))
+                .matchHistory(matchHistory)
+                .build();
     }
 }
