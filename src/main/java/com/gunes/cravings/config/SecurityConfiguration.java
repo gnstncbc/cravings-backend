@@ -56,6 +56,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.PUT, "/api/matches/**").hasAuthority(Role.ADMIN.name())
                         .requestMatchers(HttpMethod.DELETE, "/api/matches/**").hasAuthority(Role.ADMIN.name())
                         .requestMatchers(HttpMethod.POST, "/api/matches/{matchId}/score").hasAuthority(Role.ADMIN.name())
+                        .requestMatchers(HttpMethod.POST, "/api/matches/predict").hasAnyAuthority(Role.USER.name(), Role.ADMIN.name())
 
                         // Player specific rules (redundant if /api/admin/** is stricter)
                         .requestMatchers(HttpMethod.DELETE, "/api/players/**").hasAuthority(Role.ADMIN.name())
