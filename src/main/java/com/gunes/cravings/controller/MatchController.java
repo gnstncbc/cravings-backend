@@ -3,6 +3,8 @@ package com.gunes.cravings.controller;
 import com.gunes.cravings.dto.MatchCreateRequestDTO;
 import com.gunes.cravings.dto.MatchDetailDTO;
 import com.gunes.cravings.dto.MatchSummaryDTO;
+import com.gunes.cravings.dto.PredictionRequestDTO;
+import com.gunes.cravings.dto.PredictionResponseDTO;
 import com.gunes.cravings.dto.MatchScoreRequestDTO;
 import com.gunes.cravings.dto.MatchScoreResponseDTO;
 import com.gunes.cravings.dto.VoteRequestDTO;
@@ -48,7 +50,8 @@ public class MatchController {
             @PathVariable Long matchId,
             @Valid @RequestBody MatchScoreRequestDTO scoreRequestDTO) {
         MatchScoreResponseDTO response = matchService.saveOrUpdateMatchScore(matchId, scoreRequestDTO);
-        // Başarılı durumda 200 OK veya skor yeni oluşturulduysa 201 CREATED dönebilirsiniz.
+        // Başarılı durumda 200 OK veya skor yeni oluşturulduysa 201 CREATED
+        // dönebilirsiniz.
         // Şimdilik OK dönüyoruz.
         return ResponseEntity.ok(response);
     }
@@ -57,5 +60,11 @@ public class MatchController {
     public ResponseEntity<Void> deleteMatch(@PathVariable Long id) {
         matchService.deleteMatch(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/predict")
+    public ResponseEntity<PredictionResponseDTO> predictWinner(@RequestBody PredictionRequestDTO request) {
+        PredictionResponseDTO prediction = matchService.predictWinner(request);
+        return ResponseEntity.ok(prediction);
     }
 }
