@@ -13,4 +13,7 @@ public interface LineupPositionRepository extends JpaRepository<LineupPosition, 
 
     @Query("SELECT lp FROM LineupPosition lp JOIN FETCH lp.match m LEFT JOIN FETCH m.matchScore WHERE lp.player.id = :playerId ORDER BY m.savedAt DESC")
     List<LineupPosition> findByPlayerWithMatchDetails(@Param("playerId") Long playerId);
+
+    @Query("SELECT lp FROM LineupPosition lp JOIN FETCH lp.player p JOIN FETCH lp.match m LEFT JOIN FETCH m.matchScore WHERE p.id IN :playerIds")
+    List<LineupPosition> findByPlayerIdsWithDetails(@Param("playerIds") List<Long> playerIds);
 }

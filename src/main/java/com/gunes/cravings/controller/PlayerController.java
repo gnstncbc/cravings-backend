@@ -4,6 +4,8 @@ package com.gunes.cravings.controller;
 import com.gunes.cravings.dto.PlayerCreateDTO;
 import com.gunes.cravings.dto.PlayerDTO;
 import com.gunes.cravings.dto.PlayerHistoryDTO;
+import com.gunes.cravings.dto.TeamChemistryRequestDTO;
+import com.gunes.cravings.dto.TeamChemistryResponseDTO;
 import com.gunes.cravings.service.PlayerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -51,5 +53,11 @@ public class PlayerController {
     public ResponseEntity<PlayerHistoryDTO> getPlayerHistory(@PathVariable Long playerId) {
         PlayerHistoryDTO history = playerService.getPlayerHistory(playerId);
         return ResponseEntity.ok(history);
+    }
+    
+    @PostMapping("/chemistry")
+    public ResponseEntity<TeamChemistryResponseDTO> getTeamChemistry(@RequestBody TeamChemistryRequestDTO request) {
+        TeamChemistryResponseDTO chemistryData = playerService.calculateTeamChemistry(request);
+        return ResponseEntity.ok(chemistryData);
     }
 }
