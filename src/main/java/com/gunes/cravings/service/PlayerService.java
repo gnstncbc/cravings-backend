@@ -7,6 +7,9 @@ import com.gunes.cravings.dto.MatchHistoryItemDTO;
 import com.gunes.cravings.dto.PlayerCreateDTO;
 import com.gunes.cravings.dto.PlayerDTO;
 import com.gunes.cravings.dto.PlayerHistoryDTO;
+import com.gunes.cravings.dto.PlayerPairStatsDTO;
+import com.gunes.cravings.dto.TeamChemistryRequestDTO;
+import com.gunes.cravings.dto.TeamChemistryResponseDTO;
 import com.gunes.cravings.model.MatchScore;
 import com.gunes.cravings.model.Player;
 import com.gunes.cravings.model.PlayerStats; // YENİ IMPORT
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -281,7 +285,7 @@ public class PlayerService {
             });
         }
     }
-@Transactional(readOnly = true)
+    @Transactional(readOnly = true)
     public PlayerHistoryDTO getPlayerHistory(Long playerId) {
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Player not found with id: " + playerId));
@@ -371,5 +375,80 @@ public class PlayerService {
                 .resultSequence(String.join(" - ", resultChars))
                 .matchHistory(matchHistory)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public TeamChemistryResponseDTO calculateTeamChemistry(TeamChemistryRequestDTO request) {
+        List<Long> playerIds = request.getPlayerIds();
+        if (playerIds == null || playerIds.size() < 2) {
+            return new TeamChemistryResponseDTO(0.0, Collections.emptyList());
+        }
+
+        // 1. Fetch all relevant data in one go.
+        List<LineupPosition> positions = lineupPositionRepository.findByPlayerIdsWithDetails(playerIds);
+
+        // 2. Group positions by match ID for efficient lookup.
+        Map<Long, List<LineupPosition>> matchesPlayed = positions.stream()
+                .collect(Collectors.groupingBy(lp -> lp.getMatch().getId()));
+
+        List<PlayerPairStatsDTO> pairStatsList = new ArrayList<>();
+        Map<Long, List<Double>> playerIndividualWinPercentages = new HashMap<>();
+        playerIds.forEach(id -> playerIndividualWinPercentages.put(id, new ArrayList<>()));
+
+        // 3. Iterate through all unique pairs of players.
+        for (int i = 0; i < playerIds.size(); i++) {
+            for (int j = i + 1; j < playerIds.size(); j++) {
+                Long player1Id = playerIds.get(i);
+                Long player2Id = playerIds.get(j);
+
+                int gamesPlayedTogether = 0;
+                int winsTogether = 0;
+
+                // 4. Analyze each match they both participated in.
+                for (List<LineupPosition> matchPositions : matchesPlayed.values()) {
+                    Optional<LineupPosition> p1PosOpt = matchPositions.stream().filter(p -> p.getPlayer().getId().equals(player1Id)).findFirst();
+                    Optional<LineupPosition> p2PosOpt = matchPositions.stream().filter(p -> p.getPlayer().getId().equals(player2Id)).findFirst();
+
+                    if (p1PosOpt.isPresent() && p2PosOpt.isPresent()) {
+                        LineupPosition p1Pos = p1PosOpt.get();
+                        LineupPosition p2Pos = p2PosOpt.get();
+
+                        if (p1Pos.getTeamIdentifier().equals(p2Pos.getTeamIdentifier())) {
+                            gamesPlayedTogether++;
+                            MatchScore score = p1Pos.getMatch().getMatchScore();
+                            if (score != null && score.getTeamAScore() != null && score.getTeamBScore() != null) {
+                                boolean didWin = (p1Pos.getTeamIdentifier().equals("A") && score.getTeamAScore() > score.getTeamBScore()) ||
+                                        (p1Pos.getTeamIdentifier().equals("B") && score.getTeamBScore() > score.getTeamAScore());
+                                if (didWin) {
+                                    winsTogether++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (gamesPlayedTogether > 0) {
+                    double winPercentage = ((double) winsTogether / gamesPlayedTogether) * 100;
+                    pairStatsList.add(new PlayerPairStatsDTO(player1Id, player2Id, winPercentage, gamesPlayedTogether));
+                    playerIndividualWinPercentages.get(player1Id).add(winPercentage);
+                    playerIndividualWinPercentages.get(player2Id).add(winPercentage);
+                }
+            }
+        }
+
+        // 5. Calculate overall team chemistry.
+        double totalAverageSum = 0;
+        int playersWithPairs = 0;
+        for (List<Double> percentages : playerIndividualWinPercentages.values()) {
+            if (!percentages.isEmpty()) {
+                double playerAverage = percentages.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+                totalAverageSum += playerAverage;
+                playersWithPairs++;
+            }
+        }
+
+        double teamChemistry = (playersWithPairs > 0) ? (totalAverageSum / playersWithPairs) : 0.0;
+
+        return new TeamChemistryResponseDTO(teamChemistry, pairStatsList);
     }
 }
