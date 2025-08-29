@@ -12,10 +12,15 @@ import org.springframework.web.bind.annotation.RestController;
 import com.gunes.cravings.dto.ParaRequestDTO;
 import com.gunes.cravings.dto.ParaResponseDTO;
 import com.gunes.cravings.dto.ParaStartRequestDTO;
+import com.gunes.cravings.dto.SalaryChangeRequestDTO;
+import com.gunes.cravings.dto.SalaryChangeResponseDTO;
 import com.gunes.cravings.model.Para;
 import com.gunes.cravings.service.ParaService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -43,6 +48,14 @@ public class ParaController {
     public ResponseEntity<String> initParaTable(@RequestBody ParaStartRequestDTO paraInitRequestDTO) {
         paraService.initParaTable(paraInitRequestDTO);
         return ResponseEntity.ok("Para tablosu başarıyla başlatıldı.");
+    }
+
+    @PutMapping("change-salary/{id}")
+    public ResponseEntity<SalaryChangeResponseDTO> changeSalary(@PathVariable String id, @RequestBody SalaryChangeRequestDTO salaryChangeRequestDTO) {
+        paraService.changeSalary(id, salaryChangeRequestDTO.getSalary());
+        SalaryChangeResponseDTO responseDTO = new SalaryChangeResponseDTO();
+        responseDTO.setMessage("Maaş başarıyla değiştirildi. Yeni maaş: " + salaryChangeRequestDTO.getSalary().toString());
+        return ResponseEntity.ok(responseDTO);
     }
     
 }

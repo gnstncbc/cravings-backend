@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import org.springframework.stereotype.Service;
 
 import com.gunes.cravings.dto.ParaStartRequestDTO;
+import com.gunes.cravings.exception.ResourceNotFoundException;
 import com.gunes.cravings.model.Para;
 import com.gunes.cravings.repository.ParaRepository;
 
@@ -53,6 +54,19 @@ public class ParaService {
         para.setSalary(paraInitRequestDTO.getSalary());
 
         // Para nesnesini kaydet
+        paraRepository.save(para);
+    }
+
+    public void changeSalary(String id, String newSalary) {
+        Long paraId = Long.parseLong(id);
+        Long newSalaryLong = Long.parseLong(newSalary);
+
+        // findById'den dönen Optional nesnesini al
+        Para para = paraRepository.findById(paraId)
+                .orElseThrow(() -> new ResourceNotFoundException("Belirtilen ID ile maaş kaydı bulunamadı: " + paraId));
+
+        // Eğer exception fırlatılmazsa, nesne bulunmuştur ve kod buradan devam eder.
+        para.setSalary(newSalaryLong);
         paraRepository.save(para);
     }
 
