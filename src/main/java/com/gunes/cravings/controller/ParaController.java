@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gunes.cravings.dto.CreditCardLimitChangeRequestDTO;
+import com.gunes.cravings.dto.CreditCardLimitChangeResponseDTO;
 import com.gunes.cravings.dto.ParaRequestDTO;
 import com.gunes.cravings.dto.ParaResponseDTO;
 import com.gunes.cravings.dto.ParaStartRequestDTO;
@@ -21,13 +23,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/para")
 public class ParaController {
     private final ParaService paraService;
     private BigDecimal remainingMoney = BigDecimal.ZERO;
+
     @GetMapping("/test")
     public ResponseEntity<String> test() {
         return ResponseEntity.ok("Para API çalışıyor!");
@@ -35,8 +37,7 @@ public class ParaController {
 
     @PostMapping("/remaining-money")
     public ResponseEntity<ParaResponseDTO> remainingMoney(
-        @RequestBody ParaRequestDTO paraRequestDTO
-    ) {
+            @RequestBody ParaRequestDTO paraRequestDTO) {
         paraService.setcreditCardRemainingLimit(paraRequestDTO.getCreditCardRemainingLimit());
         remainingMoney = paraService.calculateRemainingMoney();
         ParaResponseDTO paraResponseDTO = new ParaResponseDTO();
@@ -51,11 +52,23 @@ public class ParaController {
     }
 
     @PutMapping("change-salary/{id}")
-    public ResponseEntity<SalaryChangeResponseDTO> changeSalary(@PathVariable String id, @RequestBody SalaryChangeRequestDTO salaryChangeRequestDTO) {
+    public ResponseEntity<SalaryChangeResponseDTO> changeSalary(@PathVariable String id,
+            @RequestBody SalaryChangeRequestDTO salaryChangeRequestDTO) {
         paraService.changeSalary(id, salaryChangeRequestDTO.getSalary());
         SalaryChangeResponseDTO responseDTO = new SalaryChangeResponseDTO();
-        responseDTO.setMessage("Maaş başarıyla değiştirildi. Yeni maaş: " + salaryChangeRequestDTO.getSalary().toString());
+        responseDTO
+                .setMessage("Maaş başarıyla değiştirildi. Yeni maaş: " + salaryChangeRequestDTO.getSalary().toString());
         return ResponseEntity.ok(responseDTO);
     }
-    
+
+    @PutMapping("change-credit-card-limit/{id}")
+    public ResponseEntity<CreditCardLimitChangeResponseDTO> changeCreditCardLimit(@PathVariable String id,
+            @RequestBody CreditCardLimitChangeRequestDTO creditCardLimitChangeRequestDTO) {
+        paraService.changeCreditCardLimit(id, creditCardLimitChangeRequestDTO.getLimit());
+        CreditCardLimitChangeResponseDTO responseDTO = new CreditCardLimitChangeResponseDTO();
+        responseDTO
+                .setMessage("Kredi kartı limiti başarıyla değiştirildi. Yeni limit: " + creditCardLimitChangeRequestDTO.getLimit().toString());
+        return ResponseEntity.ok(responseDTO);
+    }
+
 }
