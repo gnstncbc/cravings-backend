@@ -70,4 +70,17 @@ public class ParaService {
         paraRepository.save(para);
     }
 
+    public void changeCreditCardLimit(String id, String newLimit) {
+        Long paraId = Long.parseLong(id);
+        Long newLimitLong = Long.parseLong(newLimit);
+
+        // findById'den dönen Optional nesnesini al
+        Para para = paraRepository.findById(paraId)
+                .orElseThrow(() -> new ResourceNotFoundException("Belirtilen ID ile kredi kartı limiti kaydı bulunamadı: " + paraId));
+
+        // Eğer exception fırlatılmazsa, nesne bulunmuştur ve kod buradan devam eder.
+        para.setCreditCardTotalLimit(newLimitLong);
+        paraRepository.save(para);
+    }
+
 }
