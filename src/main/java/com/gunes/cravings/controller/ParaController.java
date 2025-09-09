@@ -17,6 +17,7 @@ import com.gunes.cravings.dto.ParaStartRequestDTO;
 import com.gunes.cravings.dto.SalaryChangeRequestDTO;
 import com.gunes.cravings.dto.SalaryChangeResponseDTO;
 import com.gunes.cravings.model.Para;
+import com.gunes.cravings.service.BorcService;
 import com.gunes.cravings.service.ParaService;
 
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 @RequestMapping("/api/para")
 public class ParaController {
     private final ParaService paraService;
+    private final BorcService borcService;
     private BigDecimal remainingMoney = BigDecimal.ZERO;
 
     @GetMapping("/test")
@@ -40,6 +42,9 @@ public class ParaController {
             @RequestBody ParaRequestDTO paraRequestDTO) {
         paraService.setcreditCardRemainingLimit(paraRequestDTO.getCreditCardRemainingLimit());
         remainingMoney = paraService.calculateRemainingMoney();
+        borcService.getAllBorc().stream().filter(b -> !b.getIsPaid()).forEach(b -> {
+            remainingMoney = remainingMoney.subtract(BigDecimal.valueOf(b.getBorcAmount()));
+        });
         ParaResponseDTO paraResponseDTO = new ParaResponseDTO();
         paraResponseDTO.setRemainingMoney(remainingMoney);
         return ResponseEntity.ok(paraResponseDTO);
